@@ -6,7 +6,7 @@ components:
         kind: Helm
         version: v1
         name: my-app-release
-        runnerImage: '@self'
+        runnerImage: 'bitnami/wordpress'
         deploy:
             - |
                 cat << EOF > my_values.yaml
