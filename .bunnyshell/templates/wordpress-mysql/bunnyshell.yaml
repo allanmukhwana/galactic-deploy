@@ -11,7 +11,7 @@ components:
             - |
                 cat << EOF > my_values.yaml
                     env: bunnyshell
-                    serviceImage: {{ components.my-app-image.image }}
+                    serviceImage: bitnami/wordpress
                     replicas: 1
                     ingress:
                         className: bns-nginx
