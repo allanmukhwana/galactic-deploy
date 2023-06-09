@@ -5,13 +5,13 @@ components:
     -
         kind: Helm
         version: v1
-        name: my-app-release
+        name: wordpress
         runnerImage: 'bitnami/wordpress'
         deploy:
             - |
                 cat << EOF > my_values.yaml
                     env: bunnyshell
-                    serviceImage: bitnami/wordpress
+                    serviceImage: {{ components.my-app-image.image }}
                     replicas: 1
                     ingress:
                         className: bns-nginx
