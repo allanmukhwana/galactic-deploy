@@ -1,0 +1,13 @@
+name: Wordpress + MySQL
+description: This is a boilerplate for creating a new environment using Wordpress and MySQL.
+tags: [ php, wordpress, mysql ]
+icons: [ php, wordpress, mysql ]
+stack:
+  packages:
+    - name: PHP
+      version: '7.4'
+    - name: Wordpress
+      version: '4.8'
+    - name: MySQL
+      version: '5.6'
+discoverable: true
