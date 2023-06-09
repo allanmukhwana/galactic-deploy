@@ -3,151 +3,31 @@ name: demo-wordpress
 type: primary
 components:
     -
-        kind: PersistentVolume
-        metadata:
-        name: local-pv-1
-        labels:
-            type: local
-        spec:
-        capacity:
-            storage: 1Gi
-        accessModes:
-            - ReadWriteOnce
-        hostPath:
-            path: /k8/volume/pv-1
-    -
-        kind: PersistentVolume
-        metadata:
-        name: local-pv-2
-        labels:
-            type: local
-        spec:
-        capacity:
-            storage: 1Gi
-        accessModes:
-            - ReadWriteOnce
-        hostPath:
-            path: /k8/volume/pv-2
-    -
-        kind: Service
-        metadata:
-        name: wordpress-mysql
-        labels:
-            app: wordpress
-        spec:
-        ports:
-            - port: 3306
-        selector:
-            app: wordpress
-            tier: mysql
-    -
-        kind: PersistentVolumeClaim
-        metadata:
-        name: mysql-pv-claim
-        labels:
-            app: wordpress
-        spec:
-        accessModes:
-            - ReadWriteOnce
-        resources:
-            requests:
-            storage: 1Gi
-    -
-        kind: Deployment
-        metadata:
-        name: wordpress-mysql
-        labels:
-            app: wordpress
-        spec:
-        strategy:
-            type: Recreate
-        template:
-            metadata:
-            labels:
-                app: wordpress
-                tier: mysql
-            spec:
-            containers:
-            - image: mysql:5.6
-                name: mysql
-                env:
-                - name: MYSQL_ROOT_PASSWORD
-                valueFrom:
-                    secretKeyRef:
-                    name: mysql-pass
-                    key: password
-                ports:
-                - containerPort: 3306
-                name: mysql
-                volumeMounts:
-                - name: mysql-persistent-storage
-                mountPath: /var/lib/mysql
-            volumes:
-            - name: mysql-persistent-storage
-                persistentVolumeClaim:
-                claimName: mysql-pv-claim
-                apiVersion: v1
-    -
-        kind: Service
-        metadata:
-        name: wordpress
-        labels:
-            app: wordpress
-        spec:
-        ports:
-            - port: 80
-            nodePort: 30000
-        selector:
-            app: wordpress
-            tier: frontend
-        type: NodePort
-    -
-        apiVersion: v1
-        kind: PersistentVolumeClaim
-        metadata:
-        name: wp-pv-claim
-        labels:
-            app: wordpress
-        spec:
-        accessModes:
-            - ReadWriteOnce
-        resources:
-            requests:
-            storage: 1Gi
-    -
-        apiVersion: extensions/v1beta1
-        kind: Deployment
-        metadata:
-        name: wordpress
-        labels:
-            app: wordpress
-        spec:
-        strategy:
-            type: Recreate
-        template:
-            metadata:
-            labels:
-                app: wordpress
-                tier: frontend
-            spec:
-            containers:
-            - image: buddy/wordpress:latest
-                name: wordpress
-                env:
-                - name: WORDPRESS_DB_HOST
-                value: wordpress-mysql
-                - name: WORDPRESS_DB_PASSWORD
-                valueFrom:
-                    secretKeyRef:
-                    name: mysql-pass
-                    key: password
-                ports:
-                - containerPort: 80
-                name: wordpress
-                volumeMounts:
-                - name: wordpress-persistent-storage
-                mountPath: /var/www/html
-            volumes:
-            - name: wordpress-persistent-storage
-                persistentVolumeClaim:
-                claimName: wp-pv-claim
+        kind: Helm
+        version: v1
+        name: my-app-release
+        runnerImage: 'dtzar/helm-kubectl:3.8.2'
+        deploy:
+            - |
+                cat << EOF > my_values.yaml
+                    env: bunnyshell
+                    serviceImage: {{ components.my-app-image.image }}
+                    replicas: 1
+                    ingress:
+                        className: bns-nginx
+                        host: my-app-{{ env.base_domain }}
+                EOF
+            - 'helm upgrade --install --namespace {{ env.k8s.namespace }} --dependency-update --post-renderer /bns/helpers/helm/add_labels/kustomize -f my_values.yaml my-app-{{ env.unique }} .'
+            - |
+                SERVICE_LB_IP=$(kubectl get services --namespace {{ env.k8s.namespace }} my-lb-service --output jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        destroy:
+            - 'helm uninstall my-app-{{ env.unique }} --namespace {{ env.k8s.namespace }}'
+        start:
+            - 'helm upgrade --namespace {{ env.k8s.namespace }} --post-renderer /bns/helpers/helm/add_labels/kustomize --reuse-values --set replicas=1 my-app-{{ env.unique }} .'
+        stop:
+            - 'helm upgrade --namespace {{ env.k8s.namespace }} --post-renderer /bns/helpers/helm/add_labels/kustomize --reuse-values --set replicas=0 my-app-{{ env.unique }} .'
+        exportVariables:
+            - SERVICE_LB_IP
+        gitRepo: 'https://github.com/bitnami/charts.git'
+        gitBranch: main
+        gitApplicationPath: /
