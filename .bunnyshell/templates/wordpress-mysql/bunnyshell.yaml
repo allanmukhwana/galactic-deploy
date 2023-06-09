@@ -6,7 +6,7 @@ components:
         kind: Helm
         version: v1
         name: my-app-release
-        runnerImage: 'dtzar/helm-kubectl:3.8.2'
+        runnerImage: '@self'
         deploy:
             - |
                 cat << EOF > my_values.yaml
@@ -30,4 +30,4 @@ components:
             - SERVICE_LB_IP
         gitRepo: 'https://github.com/bitnami/charts.git'
         gitBranch: main
-        gitApplicationPath: /
+        gitApplicationPath: bitnami/wordpress
